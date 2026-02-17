@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mystery Trig — Dashboard Host</title>
+<style>
+  :root{
+    --bg1:#050816;
+    --bg2:#0b1b3a;
+    --card:#0b1224cc;
+    --stroke:#ffffff14;
+    --text:#e5e7eb;
+    --muted:#a3b2c7;
+    --accent:#38bdf8;
+    --gold:#fbbf24;
+    --bad:#ef4444;
+    --good:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(56,189,248,.22), transparent 60%),
+      radial-gradient(900px 600px at 80% 20%, rgba(251,191,36,.18), transparent 55%),
+      radial-gradient(900px 600px at 50% 90%, rgba(34,197,94,.12), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 16px 30px}
+  .brand{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-weight:950}
+  .badge{
+    background:linear-gradient(90deg, rgba(56,189,248,.22), rgba(251,191,36,.18));
+    border:1px solid var(--stroke);
+    padding:6px 10px;border-radius:999px;color:var(--muted);font-size:12px
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--stroke);
+    border-radius:18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    backdrop-filter: blur(10px);
+    padding:14px;
+  }
+  .layout{
+    display:grid;grid-template-columns: 1.15fr .85fr;gap:14px
+  }
+  @media (max-width:980px){ .layout{grid-template-columns:1fr} }
+
+  #grid{
+    display:grid;
+    grid-template-columns:repeat(20, 26px);
+    gap:2px;
+    justify-content:center;
+    margin:10px auto 0;
+    width:fit-content;
+    padding:10px;
+    background:rgba(0,0,0,.25);
+    border:1px solid var(--stroke);
+    border-radius:16px;
+  }
+  .tile{width:26px;height:26px;background:#1e293b;border-radius:6px;transition:transform .15s ease, background .25s ease}
+  .tile.revealed{transform:scale(1.03)}
+
+  .topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 10px;border-radius:999px;
+    border:1px solid var(--stroke);
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+    font-size:12px;
+  }
+  .btn{
+    border:0;border-radius:14px;padding:10px 12px;font-weight:950;cursor:pointer;color:#061018;
+    background:linear-gradient(90deg, var(--accent), #60a5fa);
+    box-shadow: 0 10px 24px rgba(56,189,248,.18);
+  }
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .btnDanger{
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;padding:10px 12px;font-weight:950;cursor:pointer;color:#fff;
+    background:linear-gradient(90deg, rgba(239,68,68,.95), rgba(251,113,133,.85));
+  }
+  .btnGhost{
+    border:1px solid var(--stroke);
+    border-radius:14px;padding:10px 12px;font-weight:900;cursor:pointer;color:#fff;
+    background:linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  }
+
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px}
+  th{opacity:.9;text-align:left}
+  .muted{opacity:.75}
+
+  .phase{
+    font-weight:950;
+    color:#fff;
+    padding:6px 10px;border-radius:999px;
+    border:1px solid var(--stroke);
+    background:rgba(0,0,0,.22);
+  }
+  .phase.lobby{box-shadow:0 0 0 4px rgba(251,191,36,.10)}
+  .phase.countdown{box-shadow:0 0 0 4px rgba(56,189,248,.12)}
+  .phase.live{box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="logo">
+      <div style="width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#38bdf8,#fbbf24);box-shadow:0 12px 30px rgba(56,189,248,.18)"></div>
+      <div>
+        <div style="font-size:14px;color:var(--muted);font-weight:800">Dashboard Host</div>
+        <div style="font-size:20px;font-weight:1000;line-height:1">Mystery Trig</div>
+      </div>
+    </div>
+    <div class="badge">Start • Countdown • Reset</div>
+  </div>
+
+  <div class="layout">
+    <!-- Left: grid -->
+    <div class="card">
+      <div class="topbar">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <span class="pill" id="progress">Progreso: 0 / 300</span>
+          <span class="pill" id="teamsCount">Equipos: 0</span>
+          <span class="phase lobby" id="phasePill">Fase: lobby</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="btnStart">Iniciar partida</button>
+          <button class="btnGhost" id="btnLobby">Volver a lobby</button>
+          <button class="btnDanger" id="btnReset">Reset</button>
+        </div>
+      </div>
+
+      <div id="grid"></div>
+      <div class="muted" style="margin-top:10px">
+        Sugerencia: inicia cuando veas a todos en “Equipos”.
+      </div>
+    </div>
+
+    <!-- Right: teams -->
+    <div class="card">
+      <div style="font-weight:950;margin:2px 0 8px">Equipos en lobby / ranking</div>
+      <div class="muted" style="margin-bottom:10px">Ordenado por solvedCount.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Equipo (One Piece)</th>
+            <th>Alumno(s)</th>
+            <th>Resueltos</th>
+            <th>Última act.</th>
+          </tr>
+        </thead>
+        <tbody id="teamsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getDatabase, ref, onValue, remove, runTransaction, update, set, get
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+/* ===== Firebase config (tuyo) ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAcud6YPUTHkfS-Liyo2lAvZV5cwHzueIk",
+  authDomain: "mystery-bde3e.firebaseapp.com",
+  databaseURL: "https://mystery-bde3e-default-rtdb.firebaseio.com",
+  projectId: "mystery-bde3e",
+  storageBucket: "mystery-bde3e.firebasestorage.app",
+  messagingSenderId: "443989171807",
+  appId: "1:443989171807:web:a19f4b6a0783bd472585ea"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const GAME_ID = "trig-mystery-20x15-v1";
+
+const solvedRef = ref(db, `games/${GAME_ID}/solved`);
+const teamsRef  = ref(db, `games/${GAME_ID}/teams`);
+const locksRef  = ref(db, `games/${GAME_ID}/locks`);
+const claimedRef = ref(db, `games/${GAME_ID}/claimedCharacters`);
+const stateRef  = ref(db, `games/${GAME_ID}/state`);
+const resetCounterRef = ref(db, `games/${GAME_ID}/resetCounter`);
+const offsetRef = ref(db, ".info/serverTimeOffset");
+
+/* Pixel art 20x15 */
+const pixelMap = [
+"SSSSSSSSSSSSSSSSSSSS",
+"SSSSSSSOOOOSSSSSSSSS",
+"SSSSSSOOOOOOOSSSSSSS",
+"SSSSSOOOOOOOOOSSSSSS",
+"SSSSSSOOOOOOOSSSSSSS",
+"SSSSSSSOOOOSSSSSSSSS",
+"SSSSSSSSSSSSSSSSSSSS",
+"SSSSSSSSSSCSSSSSSSSS",
+"MMMMMMMMMMMMMMMMMMMM",
+"MMMMMMMMMMTMMMMMMMMM",
+"MMMMMMMMMTVTMMMMMMMM",
+"MMMMMMMMTHVVTMMMMMMM",
+"MMMMMMMTHHVVVTMMMMMM",
+"MMMMMMHHHHHHHHMMMMMM",
+"MMMMMWWWWWWWWWWMMMMM"
+];
+
+const colors = {
+  "S":"#60a5fa","O":"#facc15","C":"#ffffff",
+  "M":"#1e40af","W":"#93c5fd","H":"#7c2d12",
+  "T":"#78350f","V":"#f8fafc"
+};
+
+const grid = document.getElementById("grid");
+const progressEl = document.getElementById("progress");
+const teamsCountEl = document.getElementById("teamsCount");
+const phasePill = document.getElementById("phasePill");
+const teamsBody = document.getElementById("teamsBody");
+
+const btnStart = document.getElementById("btnStart");
+const btnLobby = document.getElementById("btnLobby");
+const btnReset = document.getElementById("btnReset");
+
+let serverOffset = 0;
+let solvedCache = {};
+let stateCache = { phase:"lobby" };
+
+function serverNow(){ return Date.now() + (serverOffset || 0); }
+
+/* Build grid */
+const tileEls = new Map();
+for(let r=0;r<15;r++){
+  for(let c=0;c<20;c++){
+    const id = r*20 + c + 1;
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    grid.appendChild(tile);
+    tileEls.set(id, { el: tile, r, c });
+  }
+}
+
+/* Auth boot */
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    attachListeners();
+  }else{
+    await signInAnonymously(auth);
+  }
+});
+
+function attachListeners(){
+  onValue(offsetRef, (snap) => { serverOffset = snap.val() || 0; });
+
+  onValue(solvedRef, (snap) => {
+    solvedCache = snap.val() || {};
+    const solvedCount = Object.keys(solvedCache).length;
+    progressEl.textContent = `Progreso: ${solvedCount} / 300`;
+
+    for(const [id, obj] of tileEls){
+      if(solvedCache[String(id)] === true){
+        const symbol = pixelMap[obj.r][obj.c];
+        obj.el.style.background = colors[symbol] || "#22c55e";
+        obj.el.classList.add("revealed");
+      }else{
+        obj.el.style.background = "#1e293b";
+        obj.el.classList.remove("revealed");
+      }
+    }
+  });
+
+  onValue(teamsRef, (snap) => {
+    const teams = snap.val() || {};
+    const list = Object.values(teams);
+    teamsCountEl.textContent = `Equipos: ${list.length}`;
+
+    list.sort((a,b) => (b.solvedCount||0) - (a.solvedCount||0));
+
+    teamsBody.innerHTML = "";
+    for(const t of list){
+      const s = [t.student1, t.student2].filter(Boolean).join(" + ");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(t.teamLabel || "—")}</td>
+        <td class="muted">${escapeHtml(s || "—")}</td>
+        <td>${t.solvedCount || 0}</td>
+        <td class="muted">${formatAgo(t.lastSeen)}</td>
+      `;
+      teamsBody.appendChild(tr);
+    }
+  });
+
+  onValue(stateRef, (snap) => {
+    stateCache = snap.val() || { phase:"lobby" };
+    renderPhase();
+  });
+
+  // aseguramos estado inicial si no existe
+  get(stateRef).then(s => {
+    if(!s.exists()){
+      set(stateRef, { phase:"lobby" });
+    }
+  });
+}
+
+function renderPhase(){
+  const p = stateCache.phase || "lobby";
+  phasePill.textContent = `Fase: ${p}`;
+  phasePill.classList.remove("lobby","countdown","live");
+  phasePill.classList.add(p);
+
+  btnStart.disabled = (p !== "lobby");
+}
+
+/* Host controls */
+btnStart.addEventListener("click", async () => {
+  // countdown 5s, luego live
+  const endsAt = serverNow() + 5000;
+
+  btnStart.disabled = true;
+
+  await update(stateRef, { phase:"countdown", countdownEndsAt: endsAt });
+
+  // Después de 5s (aprox) pasar a live
+  setTimeout(async () => {
+    await update(stateRef, { phase:"live" });
+  }, 5200);
+});
+
+btnLobby.addEventListener("click", async () => {
+  await update(stateRef, { phase:"lobby", countdownEndsAt: null });
+});
+
+btnReset.addEventListener("click", async () => {
+  const ok = confirm("Reset total: borra SOLVED/LOCKS/TEAMS/personajes y regresa a todos a inicio.");
+  if(!ok) return;
+
+  btnReset.disabled = true;
+  btnReset.textContent = "Reseteando…";
+
+  try{
+    await remove(solvedRef);
+    await remove(locksRef);
+    await remove(teamsRef);
+    await remove(claimedRef);
+
+    await update(stateRef, { phase:"lobby", countdownEndsAt: null });
+
+    // fuerza a que los alumnos regresen a inicio
+    await runTransaction(resetCounterRef, (v) => (typeof v === "number" ? v + 1 : 1), { applyLocally:false });
+
+  } finally {
+    setTimeout(() => {
+      btnReset.disabled = false;
+      btnReset.textContent = "Reset";
+    }, 700);
+  }
+});
+
+/* Helpers */
+function formatAgo(ts){
+  if(!ts) return "-";
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff/1000);
+  if(s < 60) return `${s}s`;
+  const m = Math.floor(s/60);
+  if(m < 60) return `${m}m`;
+  const h = Math.floor(m/60);
+  return `${h}h`;
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+</script>
+</body>
+</html>
